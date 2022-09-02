@@ -1,15 +1,13 @@
-from django.contrib.auth import get_user_model, password_validation
+from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField, PrimaryKeyRelatedField
 
 from app.models import (
-    Tag, Ingredient, IngredientUnit, RecipeIngredient,
-    Recipe, RecipeTag, ShoppingCart, Subscription, FavoriteRecipe,
+    FavoriteRecipe, Ingredient, IngredientUnit, Recipe, RecipeIngredient,
+    RecipeTag, ShoppingCart, Subscription, Tag, User
 )
-
-User = get_user_model()
 
 
 WRONG_CURRENT_PASSWORD = 'Current password is wrong'

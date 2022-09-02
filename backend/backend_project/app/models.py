@@ -1,8 +1,9 @@
 from django.db import models
+from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db.models import UniqueConstraint
 
-from users.models import CustomUser
+User = get_user_model()
 
 
 class MeasureUnit(models.Model):
@@ -14,6 +15,10 @@ class MeasureUnit(models.Model):
         verbose_name='Единица измерения',
         help_text='Введите единицу измерения'
     )
+
+    class Meta:
+        verbose_name = 'Единица измерения'
+        verbose_name_plural = 'Единицы измерения'
 
     def __str__(self):
         return self.name
@@ -35,6 +40,10 @@ class IngredientUnit(models.Model):
         verbose_name='Единицы измерения'
     )
 
+    class Meta:
+        verbose_name = 'Наименование ингредиента'
+        verbose_name_plural = 'Наименования ингредиентов'
+
     def __str__(self):
         return self.name
 
@@ -50,6 +59,10 @@ class Ingredient(models.Model):
         MeasureUnit,
         on_delete=models.CASCADE
     )
+
+    class Meta:
+        verbose_name = 'Ингредиент'
+        verbose_name_plural = 'Ингредиенты'
 
 
 class Tag(models.Model):
@@ -72,6 +85,10 @@ class Tag(models.Model):
         verbose_name='Цвет тэга в HEX',
         help_text='Введите цвет тэга в HEX')
 
+    class Meta:
+        verbose_name = 'Тэг'
+        verbose_name_plural = 'Тэги'
+
     def __str__(self):
         return self.name
 
@@ -89,12 +106,16 @@ class RecipeIngredient(models.Model):
         verbose_name='Количество'
     )
 
+    class Meta:
+        verbose_name = 'Связь рецепта с ингредиентами'
+        verbose_name_plural = 'Связи рецепта с ингредиентами'
+
 
 class Recipe(models.Model):
     """Описание модели для рецептов."""
 
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='recipes',
         verbose_name='Автор'
@@ -116,7 +137,9 @@ class Recipe(models.Model):
         through='RecipeTag',
         verbose_name='Теги'
     )
-    cooking_time = models.IntegerField(validators=[MinValueValidator(1)])
+    cooking_time = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)]
+    )
     ingredient = models.ManyToManyField(
         RecipeIngredient,
         related_name='recipes',
@@ -125,6 +148,8 @@ class Recipe(models.Model):
 
     class Meta:
         ordering = ['-pub_date']
+        verbose_name = 'Рецепт'
+        verbose_name_plural = 'Рецепты'
 
     def __str__(self):
         return self.name
@@ -145,39 +170,21 @@ class RecipeTag(models.Model):
         on_delete=models.CASCADE
     )
 
-
-class FavoriteRecipe(models.Model):
-    """Таблица для любимых рецептов."""
-
-    recipe = models.ForeignKey(
-        Recipe,
-        verbose_name='Рецепт',
-        on_delete=models.CASCADE
-    )
-
-    user = models.ForeignKey(
-        CustomUser,
-        on_delete=models.CASCADE,
-        verbose_name='Автор'
-    )
-
     class Meta:
-        constraints = [UniqueConstraint(
-            fields=['recipe', 'user'],
-            name='unique_recipe_favorite'
-        )]
+        verbose_name = 'Связь рецепта с тегами'
+        verbose_name_plural = 'Связи рецепта с тегами'
 
 
 class Subscription(models.Model):
     """Модель подписок"""
     user = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='follower',
         verbose_name='Подписчик'
     )
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='author',
         verbose_name='Автор'
@@ -192,23 +199,40 @@ class Subscription(models.Model):
         verbose_name_plural = 'Подписки'
 
 
-class ShoppingCart(models.Model):
-    """Таблица для корзины покупок."""
-
+class UniqueUserRecipeModel(models.Model):
+    """Абстрактная модель для уникальных пар пользователь-рецепт"""
     recipe = models.ForeignKey(
         Recipe,
         verbose_name='Рецепт',
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE
     )
 
     user = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         verbose_name='Автор'
     )
 
     class Meta:
+        """Метаданые абстрактной модели."""
+        abstract = True
         constraints = [UniqueConstraint(
             fields=['recipe', 'user'],
-            name='unique_recipe_cart'
+            name='unique_user_recipe_pair'
         )]
+
+
+class FavoriteRecipe(UniqueUserRecipeModel):
+    """Модель любимых рецептов."""
+
+    class Meta(UniqueUserRecipeModel.Meta):
+        verbose_name = 'Любимый рецепт'
+        verbose_name_plural = 'Любимые рецепты'
+
+
+class ShoppingCart(UniqueUserRecipeModel):
+    """Модель рецептов в корзине покупок."""
+
+    class Meta(UniqueUserRecipeModel.Meta):
+        verbose_name = 'Рецепт в корзине покупок'
+        verbose_name_plural = 'Рецепты в корзине покупок'

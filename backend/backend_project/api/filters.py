@@ -19,11 +19,6 @@ class IngredientFilter(filters.FilterSet):
 class RecipeFilter(filters.FilterSet):
     """Фильтр рецептов"""
 
-    # ТЗ - Показывать рецепты только с указанными тегами (по slug)
-    tags = django_filters.AllValuesMultipleFilter(
-        field_name='tag__slug',
-        conjoined=False,
-    )
     # ТЗ - Показывать рецепты только автора с указанным id.
     author = django_filters.AllValuesFilter(
         field_name='author__id'
@@ -32,4 +27,3 @@ class RecipeFilter(filters.FilterSet):
     class Meta:
         model = Recipe
         fields = ('tag',)
-

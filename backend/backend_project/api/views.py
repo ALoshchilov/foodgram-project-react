@@ -1,6 +1,5 @@
 import io
 
-from django.contrib.auth import get_user_model
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -17,13 +16,12 @@ from .filters import IngredientFilter, RecipeFilter
 from .paginators import PageLimitPagination
 from .permissions import Author, Follower, ReadOnly
 from .serializers import (
-    UserSerializer, ChangePasswordSerializer, TagSerializer,
-    IngredientUnitSerializer, RecipePostSerializer,
-    RecipeGetSerializer, SubscriptionGetSerializer,
-    RecipeNestedSerializer
+    ChangePasswordSerializer, IngredientUnitSerializer, RecipeGetSerializer,
+    RecipeNestedSerializer, RecipePostSerializer, SubscriptionGetSerializer,
+    TagSerializer, UserSerializer
 )
 from app.models import (
-    Tag, Ingredient, Recipe, Subscription, FavoriteRecipe, ShoppingCart
+    FavoriteRecipe, Ingredient, Recipe,  ShoppingCart, Subscription, Tag, User
 )
 
 
@@ -38,9 +36,6 @@ ALREADY_IN_SHOPPING_LIST = 'the recipe is already in your shopping list'
 REMOVED_FROM_SHOPPING_LIST = (
     'you have removed the recipe from your shopping list'
 )
-
-
-User = get_user_model()
 
 
 # Вью-сеты эндпойнтов для работы с пользователями
@@ -125,7 +120,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [Author | ReadOnly]
     pagination_class = PageLimitPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('tags', 'author',)
+    filterset_fields = ('author',)
     filterset_class = RecipeFilter
 
     def get_serializer_class(self):
@@ -137,12 +132,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def get_queryset(self):
+        # По ТЗ - Показывать только рецепты со включенными тэгами
+        tags = dict(self.request.query_params).get('tags')
+        tags_ids = []
+        if tags:
+            tags_ids = Tag.objects.filter(slug__in=tags).values_list(
+                'id', flat=True
+            )
         # По ТЗ - Показывать только рецепты, находящиеся в списке избранного.
         if self.request.query_params.get('is_favorited'):
             favorites = FavoriteRecipe.objects.filter(
                 user=self.request.user
             ).values_list('recipe__id', flat=True)
-            queryset = Recipe.objects.filter(id__in=favorites)
+            queryset = Recipe.objects.filter(
+                id__in=favorites, tag__id__in=tags_ids
+            )
             return queryset
 
         # По ТЗ - Показывать только рецепты, находящиеся в списке покупок.
@@ -152,7 +156,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             ).values_list('recipe__id', flat=True)
             queryset = Recipe.objects.filter(id__in=in_cart)
             return queryset
-        return Recipe.objects.all()
+        return Recipe.objects.filter(tag__id__in=tags_ids)
 
 
 class SubscriptionPostDeleteView(APIView):
