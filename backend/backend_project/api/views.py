@@ -120,7 +120,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [Author | ReadOnly]
     pagination_class = PageLimitPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('author',)
+    filterset_fields = ('tags', 'author',)
     filterset_class = RecipeFilter
 
     def get_serializer_class(self):
@@ -132,31 +132,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def get_queryset(self):
-        # По ТЗ - Показывать только рецепты со включенными тэгами
-        tags = dict(self.request.query_params).get('tags')
-        tags_ids = []
-        if tags:
-            tags_ids = Tag.objects.filter(slug__in=tags).values_list(
-                'id', flat=True
-            )
-        # По ТЗ - Показывать только рецепты, находящиеся в списке избранного.
+        if self.request.user.is_anonymous:
+            return Recipe.objects.all()
+        # По ТЗ - Показывать только рецепты, находящиеся в списке избранного
         if self.request.query_params.get('is_favorited'):
             favorites = FavoriteRecipe.objects.filter(
                 user=self.request.user
             ).values_list('recipe__id', flat=True)
-            queryset = Recipe.objects.filter(
-                id__in=favorites, tag__id__in=tags_ids
-            )
+            queryset = Recipe.objects.filter(id__in=favorites)
             return queryset
-
-        # По ТЗ - Показывать только рецепты, находящиеся в списке покупок.
+        # По ТЗ - Показывать только рецепты, находящиеся в списке покупок
         if self.request.query_params.get('is_in_shopping_cart'):
             in_cart = ShoppingCart.objects.filter(
                 user=self.request.user
             ).values_list('recipe__id', flat=True)
             queryset = Recipe.objects.filter(id__in=in_cart)
             return queryset
-        return Recipe.objects.filter(tag__id__in=tags_ids)
+        return Recipe.objects.all()
 
 
 class SubscriptionPostDeleteView(APIView):
