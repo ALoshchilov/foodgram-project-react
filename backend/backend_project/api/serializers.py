@@ -1,4 +1,5 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, password_validation
+from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField, PrimaryKeyRelatedField
@@ -6,10 +7,12 @@ from rest_framework.relations import SlugRelatedField, PrimaryKeyRelatedField
 from app.models import (
     Tag, Ingredient, IngredientUnit, RecipeIngredient,
     Recipe, RecipeTag, ShoppingCart, Subscription, FavoriteRecipe,
-    # RecipeCart
 )
 
 User = get_user_model()
+
+
+WRONG_CURRENT_PASSWORD = 'Current password is wrong'
 
 # Сериализаторы функционала, связанного с пользователями
 
@@ -18,7 +21,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для кастомной модели пользователя."""
 
     password = serializers.CharField(write_only=True)
-    is_subscribed = serializers.SerializerMethodField('check_subscription')
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         fields = (
@@ -26,16 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
             'first_name', 'last_name', 'is_subscribed'
         )
         model = User
-
-    def check_subscription(self, obj):
-        request = self.context.get('request', None)
-        if not request:
-            return False
-        if isinstance(request.user, User):
-            return Subscription.objects.filter(
-                user=request.user, author=obj
-            ).exists()
-        return False
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -47,12 +40,52 @@ class UserSerializer(serializers.ModelSerializer):
         )
         return user
 
+    def validate(self, attrs):
+        user = User(**attrs)
+        password = attrs.get('password')
+        errors = dict()
+        try:
+            password_validation.validate_password(password=password, user=user)
+        except ValidationError as e:
+            errors['password'] = list(e.messages)
+        if errors:
+            raise serializers.ValidationError(errors)
+        return super(UserSerializer, self).validate(attrs)
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request', None)
+        if not request:
+            return False
+        if isinstance(request.user, User):
+            return Subscription.objects.filter(
+                user=request.user, author=obj
+            ).exists()
+        return False
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     """Сериализатор для эндпоинта смены пароля пользователя."""
 
     current_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        errors = dict()
+        try:
+            request = self.context.get('request', None)
+            current_password = attrs.get('current_password')
+            new_password = attrs.get('new_password')
+            if not request.user.check_password(current_password):
+                raise ValidationError(WRONG_CURRENT_PASSWORD)
+            password_validation.validate_password(
+                password=new_password, user=request.user
+            )
+        except ValidationError as e:
+            errors['new_password'] = list(e.messages)
+
+        if errors:
+            raise serializers.ValidationError(errors)
+        return super(ChangePasswordSerializer, self).validate(attrs)
 
     class Meta:
         model = User
@@ -111,11 +144,9 @@ class RecipeGetSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientGetSerializer(
         many=True, read_only=True, source='ingredient'
     )
-    image = serializers.SerializerMethodField('get_image_url')
-    is_favorited = serializers.SerializerMethodField('check_is_favorited')
-    is_in_shopping_cart = serializers.SerializerMethodField(
-        'check_is_in_shopping_cart'
-    )
+    image = serializers.SerializerMethodField()
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         fields = (
@@ -124,7 +155,7 @@ class RecipeGetSerializer(serializers.ModelSerializer):
         )
         model = Recipe
 
-    def check_is_in_shopping_cart(self, obj):
+    def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request', None)
         if not request:
             return False
@@ -134,7 +165,7 @@ class RecipeGetSerializer(serializers.ModelSerializer):
             user=request.user, recipe=obj
         ).exists()
 
-    def check_is_favorited(self, obj):
+    def get_is_favorited(self, obj):
         request = self.context.get('request', None)
         if not request:
             return False
@@ -144,7 +175,8 @@ class RecipeGetSerializer(serializers.ModelSerializer):
             user=request.user, recipe=obj
         ).exists()
 
-    def get_image_url(self, obj):
+    def get_image(self, obj):
+        # поменять на джойн
         return '/media/' + str(obj.image)
 
 
@@ -201,12 +233,13 @@ class RecipePostSerializer(serializers.ModelSerializer):
 
 # Сериализаторы подписок
 # Переименовать, хреновый нейминг вышел
-class SubscriptionRecipeSerializer(serializers.ModelSerializer):
+class RecipeNestedSerializer(serializers.ModelSerializer):
     """Вспомогательный сериализатор для рецептов в подписках."""
 
-    image = serializers.SerializerMethodField('get_image_url')
+    image = serializers.SerializerMethodField()
 
-    def get_image_url(self, obj):
+    def get_image(self, obj):
+        # поменять на ос джойн
         return '/media/' + str(obj.image)
 
     class Meta:
@@ -217,48 +250,29 @@ class SubscriptionRecipeSerializer(serializers.ModelSerializer):
 class SubscriptionGetSerializer(serializers.ModelSerializer):
     """Сериализатор для подписок."""
 
-    recipes = serializers.SerializerMethodField('get_recipes')
+    recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
         source='recipes.count', read_only=True
     )
+    is_subscribed = serializers.SerializerMethodField()
 
     def get_recipes(self, obj):
         queryset = obj.recipes.all()[:self.context.get('recipes_limit', None)]
-        serializer = SubscriptionRecipeSerializer(queryset, many=True)
+        serializer = RecipeNestedSerializer(queryset, many=True)
         return serializer.data
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request', None)
+        if not request:
+            return False
+        return Subscription.objects.filter(
+            user=request.user, author=obj
+        ).exists()
 
     class Meta:
 
         fields = (
-            'id', 'username', 'email', 'first_name', 'last_name', 'recipes',
-            'recipes_count'
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'is_subscribed', 'recipes', 'recipes_count'
         )
         model = User
-
-
-# Пока скопирую в чердак, вдруг пригодится
-
-# class RecipeTagSerializer(serializers.ModelSerializer):
-#     """Сериализатор модели-связи для тегов и рецептов"""
-
-#     class Meta:
-#         fields = ('__all__')
-#         model = RecipeTag
-
-
-# class MeasurementUnitSerializer(serializers.ModelSerializer):
-#     """Сериализатор модели единиц измерения"""
-
-#     class Meta:
-#         fields = ('name',)
-#         model = MeasureUnit
-
-
-# class IngredientSerializer(serializers.ModelSerializer):
-#     """Сериализатор модели ингредиентов"""
-
-#     name = serializers.CharField()
-
-#     class Meta:
-#         fields = ('name',)
-#         model = Ingredient

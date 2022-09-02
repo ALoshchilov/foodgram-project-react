@@ -1,16 +1,12 @@
 import io
-from django.http import FileResponse
-from reportlab.pdfgen import canvas
 
 from django.contrib.auth import get_user_model
-# from django.http import FileResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-# from reportlab.pdfgen import canvas
+from reportlab.pdfgen import canvas
 from rest_framework import mixins, status, viewsets
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -20,19 +16,29 @@ from rest_framework.views import APIView
 from .filters import IngredientFilter, RecipeFilter
 from .paginators import PageLimitPagination
 from .permissions import Author, Follower, ReadOnly
-
-
 from .serializers import (
     UserSerializer, ChangePasswordSerializer, TagSerializer,
     IngredientUnitSerializer, RecipePostSerializer,
     RecipeGetSerializer, SubscriptionGetSerializer,
-    SubscriptionRecipeSerializer
+    RecipeNestedSerializer
 )
 from app.models import (
-    Tag, Ingredient, Recipe, Subscription,
-    FavoriteRecipe, ShoppingCart
-    # RecipeCart
+    Tag, Ingredient, Recipe, Subscription, FavoriteRecipe, ShoppingCart
 )
+
+
+ERROR_STATUS = 'Error'
+SUCCESS_STATUS = 'Success'
+PASSWORD_CHANGED = ' password updated successfully'
+CAN_NOT_FOLLOW_YOURSELF = ' you cannot follow yourself'
+ALREADY_FOLLOW = ' you have already followed the author'
+UNFOLLOW_AUTHOR = ' you have unfollowed the author'
+ALREADY_IN_FAVORITES = ' the recipe is already in favorite'
+ALREADY_IN_SHOPPING_LIST = 'the recipe is already in your shopping list'
+REMOVED_FROM_SHOPPING_LIST = (
+    'you have removed the recipe from your shopping list'
+)
+
 
 User = get_user_model()
 
@@ -45,7 +51,6 @@ class CustomUserViewSet(
     mixins.ListModelMixin,
     viewsets.GenericViewSet
 ):
-    """View-set для эндпоинта users."""
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -53,19 +58,16 @@ class CustomUserViewSet(
 
 
 class UsersMeApiView(APIView):
-    """Отдельно описываем поведение для users/me."""
 
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        """Получаем себя при обращении на users/me."""
 
         serializer = UserSerializer(self.request.user)
         return Response(serializer.data)
 
 
 class ChangePasswordView(CreateAPIView):
-    """Представление для эндпоинта смены пароля пользователя."""
 
     serializer_class = ChangePasswordSerializer
     model = User
@@ -78,36 +80,24 @@ class ChangePasswordView(CreateAPIView):
         user = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        if not user.check_password(
-                serializer.data.get("current_password")
-        ):
-            return Response(
-                {
-                    'status': 'Error',
-                    'message': 'current password is wrong!',
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         user.set_password(serializer.data.get("new_password"))
         user.save()
         return Response(
             {
-                'status': 'Success',
-                'message': 'password updated successfully',
+                'status': SUCCESS_STATUS,
+                'message': PASSWORD_CHANGED,
             },
             status=status.HTTP_204_NO_CONTENT,
         )
 
-# Вью-сеты эндпойнтов, участвующих в создании и получении рецепта
 
+# Вью-сеты эндпойнтов, участвующих в создании и получении рецепта
 
 class TagViewSet(
     mixins.RetrieveModelMixin,
     mixins.ListModelMixin,
     viewsets.GenericViewSet
 ):
-    """Представление для эндпоинта Tag."""
 
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
@@ -119,26 +109,20 @@ class IngredientViewSet(
     mixins.ListModelMixin,
     viewsets.GenericViewSet
 ):
-    """Представление для эндпоинта Ингредиентов."""
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientUnitSerializer
-
     permission_classes = (AllowAny,)
-
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('name',)
     filterset_class = IngredientFilter
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    """Представление для эндпоинта Рецептов."""
 
     queryset = Recipe.objects.all()
     serializer_class = RecipeGetSerializer
-
     permission_classes = [Author | ReadOnly]
-
     pagination_class = PageLimitPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('tags', 'author',)
@@ -170,10 +154,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return queryset
         return Recipe.objects.all()
 
-# Вью-сеты для подписок
 
-
-class SubscribtionPostDeleteView(APIView):
+class SubscriptionPostDeleteView(APIView):
 
     permission_classes = [Follower | ReadOnly]
 
@@ -182,8 +164,8 @@ class SubscribtionPostDeleteView(APIView):
         if author == self.request.user:
             return Response(
                 {
-                    'status': 'Error',
-                    'message': 'you cannot follow yourself',
+                    'status': ERROR_STATUS,
+                    'message': CAN_NOT_FOLLOW_YOURSELF,
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -193,8 +175,8 @@ class SubscribtionPostDeleteView(APIView):
         if not created:
             return Response(
                 {
-                    'status': 'Error',
-                    'message': 'you have already followed the author',
+                    'status': ERROR_STATUS,
+                    'message': ALREADY_FOLLOW,
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -210,15 +192,16 @@ class SubscribtionPostDeleteView(APIView):
         ).delete()
         return Response(
             {
-                'status': 'Success',
-                'message': 'you have unfollowed the author',
+                'status': SUCCESS_STATUS,
+                'message': UNFOLLOW_AUTHOR,
             },
             status=status.HTTP_204_NO_CONTENT
         )
 
 
-class SubscribtionGetViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-
+class SubscriptionGetViewSet(
+    mixins.ListModelMixin, viewsets.GenericViewSet
+):
     serializer_class = SubscriptionGetSerializer
     pagination_class = PageLimitPagination
     permission_classes = [IsAuthenticated]
@@ -249,13 +232,16 @@ class FavoritePostDeleteView(APIView):
 
     def post(self, request, **kwargs):
         recipe = get_object_or_404(Recipe, id=self.kwargs["id"])
-        serializer = SubscriptionRecipeSerializer(recipe)
+        serializer = RecipeNestedSerializer(recipe)
         favorite, created = FavoriteRecipe.objects.get_or_create(
             user=self.request.user, recipe=recipe
         )
         if not created:
             return Response(
-                'The recipe is already in favorites',
+                {
+                    'status': ERROR_STATUS,
+                    'message': ALREADY_IN_FAVORITES,
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
         favorite.save()
@@ -271,8 +257,7 @@ class FavoritePostDeleteView(APIView):
 
 
 # Вью - сеты функционла корзины
-class CartPostDestroyView(APIView):
-    """Представление для добавления и удаления из корзины."""
+class ShoppingCartPostDeleteView(APIView):
 
     def post(self, request, **kwargs):
         recipe = get_object_or_404(Recipe, id=self.kwargs["id"])
@@ -282,13 +267,13 @@ class CartPostDestroyView(APIView):
         if not created:
             return Response(
                 {
-                    'status': 'Error',
-                    'message': 'the recipe is already in your shopping list',
+                    'status': ERROR_STATUS,
+                    'message': ALREADY_IN_SHOPPING_LIST,
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
         shopping_list.save()
-        serializer = SubscriptionRecipeSerializer(recipe)
+        serializer = RecipeNestedSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, requets, **kwargs):
@@ -299,32 +284,52 @@ class CartPostDestroyView(APIView):
         ).delete()
         return Response(
             {
-                'status': 'Success',
-                'message': 'you have removed the recipe from your shopping list',
+                'status': SUCCESS_STATUS,
+                'message': REMOVED_FROM_SHOPPING_LIST,
             },
             status=status.HTTP_204_NO_CONTENT
         )
 
 
-class CartDownloadView(APIView):
+class DownloadShoppingCartView(APIView):
     """Представление для формирования и скачивания списка покупок."""
 
     def get(self, request, **kwargs):
+        line = 800
+
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer)
-
-        line = 800
         pdfmetrics.registerFont(TTFont(
             'DejaVuSerif', 'DejaVuSerif.ttf', 'UTF-8'
         ))
         p.setFont('DejaVuSerif', 20)
         p.drawString(15, line, "Список покупок.")
+        line -= 40
+        p.setFont('DejaVuSerif', 12)
 
-        recipes = ShoppingCart.objects.filter(
-            user=self.request.user
-        ).values_list('recipe__id', flat=True)
-        recipes
-        p.showPage()
+        recipes = Recipe.objects.filter(
+            id__in=ShoppingCart.objects.filter(
+                user=self.request.user
+            ).values_list('recipe__id', flat=True)
+        )
+        shopping_list = {}
+        for recipe in recipes:
+            for ingredient in recipe.ingredient.all():
+                key = (
+                    f'{str(ingredient.ingredient.name)}'
+                    f', {str(ingredient.ingredient.measurement_unit.name)}'
+                )
+                if shopping_list.get(key):
+                    shopping_list[key] += ingredient.amount
+                else:
+                    shopping_list[key] = ingredient.amount
+        for ingredient, amount in sorted(shopping_list.items()):
+            line -= 20
+            p.drawString(
+                10, line, f'{ingredient}........{amount}'.capitalize()
+            )
         p.save()
         buffer.seek(0)
-        return FileResponse(buffer, as_attachment=True, filename='hello.pdf')
+        return FileResponse(
+            buffer, as_attachment=True, filename='shopping-list.pdf'
+        )
