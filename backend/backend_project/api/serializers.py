@@ -14,6 +14,9 @@ from backend_project.settings import MEDIA_ROOT
 
 
 WRONG_CURRENT_PASSWORD = 'Current password is wrong'
+NOT_UNIQUE_INGREDS = 'Ingredient {ingredient} in a recipe should be unique'
+NOT_POSITIVE_COOKING_TIME = 'Cooking time should be more than 0 minutes'
+NOT_POSITIVE_AMOUNT = 'Amount of {ingredient} should be more 0'
 
 # Сериализаторы функционала, связанного с пользователями
 
@@ -177,7 +180,6 @@ class RecipeGetSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_image(self, obj):
-        # return '/media/' + str(obj.image)
         return os.path.join(MEDIA_ROOT, str(obj.image))
 
 
@@ -195,6 +197,13 @@ class RecipePostSerializer(serializers.ModelSerializer):
         many=True,
         source='ingredient'
     )
+
+    class Meta:
+        fields = (
+            'ingredients', 'tags', 'image', 'author', 'text',
+            'cooking_time', 'name'
+        )
+        model = Recipe
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredient')
@@ -224,23 +233,34 @@ class RecipePostSerializer(serializers.ModelSerializer):
             RecipeTag.objects.create(recipe=instance, tag=tag)
         return instance
 
-    class Meta:
-        fields = (
-            'ingredients', 'tags', 'image', 'author', 'text',
-            'cooking_time', 'name'
-        )
-        model = Recipe
+    def validate(self, attrs):
+        ingredients_list = []
+        for ingredient_piece in attrs.get('ingredient'):
+            ingredient, amount_info = list(ingredient_piece.items())
+            name = ingredient[1].name
+            amount = int(amount_info[1])
+            if ingredient in ingredients_list:
+                raise serializers.ValidationError(
+                    NOT_UNIQUE_INGREDS.format(ingredient=name)
+                )
+            ingredients_list.append(ingredient)
+
+            if amount <= 0:
+                raise serializers.ValidationError(
+                    NOT_POSITIVE_AMOUNT.format(ingredient=name)
+                )
+        if int(attrs.get('cooking_time')) <= 0:
+            raise serializers.ValidationError(NOT_POSITIVE_COOKING_TIME)
+        return attrs
 
 
 # Сериализаторы подписок
 class RecipeNestedSerializer(serializers.ModelSerializer):
-    """Вспомогательный сериализатор для рецептов в подписках."""
 
     image = serializers.SerializerMethodField()
 
     def get_image(self, obj):
         return os.path.join(MEDIA_ROOT, str(obj.image))
-        # return '/media/' + str(obj.image)
 
     class Meta:
         fields = ('id', 'name', 'image', 'cooking_time')

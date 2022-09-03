@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .filters import IngredientFilter, RecipeFilter
+from .filters import RecipeFilter
 from .paginators import PageLimitPagination
 from .permissions import Author, Follower, ReadOnly
 from .serializers import (
@@ -105,12 +105,14 @@ class IngredientViewSet(
     viewsets.GenericViewSet
 ):
 
-    queryset = Ingredient.objects.all()
     serializer_class = IngredientUnitSerializer
     permission_classes = (AllowAny,)
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('name',)
-    filterset_class = IngredientFilter
+
+    def get_queryset(self):
+        name_param = self.request.query_params.get('name', None)
+        if name_param:
+            return Ingredient.objects.filter(name__name__icontains=name_param)
+        return Ingredient.objects.all()
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -120,7 +122,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [Author | ReadOnly]
     pagination_class = PageLimitPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('tags', 'author',)
     filterset_class = RecipeFilter
 
     def get_serializer_class(self):
@@ -130,25 +131,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
-
-    def get_queryset(self):
-        if self.request.user.is_anonymous:
-            return Recipe.objects.all()
-        # По ТЗ - Показывать только рецепты, находящиеся в списке избранного
-        if self.request.query_params.get('is_favorited'):
-            favorites = FavoriteRecipe.objects.filter(
-                user=self.request.user
-            ).values_list('recipe__id', flat=True)
-            queryset = Recipe.objects.filter(id__in=favorites)
-            return queryset
-        # По ТЗ - Показывать только рецепты, находящиеся в списке покупок
-        if self.request.query_params.get('is_in_shopping_cart'):
-            in_cart = ShoppingCart.objects.filter(
-                user=self.request.user
-            ).values_list('recipe__id', flat=True)
-            queryset = Recipe.objects.filter(id__in=in_cart)
-            return queryset
-        return Recipe.objects.all()
 
 
 class SubscriptionPostDeleteView(APIView):
