@@ -288,7 +288,6 @@ class ShoppingCartPostDeleteView(APIView):
 
 
 class DownloadShoppingCartView(APIView):
-    """Представление для формирования и скачивания списка покупок."""
 
     def get(self, request, **kwargs):
         line = 800

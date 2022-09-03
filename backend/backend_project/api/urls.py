@@ -14,10 +14,10 @@ app_name = 'api'
 
 router_v1 = DefaultRouter()
 
-router_v1.register('users', CustomUserViewSet)
-router_v1.register('tags', TagViewSet)
-router_v1.register('ingredients', IngredientViewSet)
-router_v1.register('recipes', RecipeViewSet)
+router_v1.register('users', CustomUserViewSet, 'Users')
+router_v1.register('tags', TagViewSet, 'Tags')
+router_v1.register('ingredients', IngredientViewSet, 'Ingredients')
+router_v1.register('recipes', RecipeViewSet, 'Recipes')
 
 
 urlpatterns = [
@@ -28,6 +28,7 @@ urlpatterns = [
     ),
     path('users/set_password/', ChangePasswordView.as_view()),
     path('users/me/', UsersMeApiView.as_view()),
+
     re_path(
         r'recipes/(?P<id>\d+)/favorite', FavoritePostDeleteView.as_view()
     ),
@@ -35,9 +36,11 @@ urlpatterns = [
         r'recipes/(?P<id>\d+)/shopping_cart',
         ShoppingCartPostDeleteView.as_view()
     ),
+
     path(
         'users/subscriptions/', SubscriptionGetViewSet.as_view({'get': 'list'})
     ),
+
     path(
         'recipes/download_shopping_cart/', DownloadShoppingCartView.as_view()
     ),

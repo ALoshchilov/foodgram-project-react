@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
@@ -8,6 +10,7 @@ from app.models import (
     FavoriteRecipe, Ingredient, IngredientUnit, Recipe, RecipeIngredient,
     RecipeTag, ShoppingCart, Subscription, Tag, User
 )
+from backend_project.settings import MEDIA_ROOT
 
 
 WRONG_CURRENT_PASSWORD = 'Current password is wrong'
@@ -174,8 +177,8 @@ class RecipeGetSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_image(self, obj):
-        # поменять на джойн
-        return '/media/' + str(obj.image)
+        # return '/media/' + str(obj.image)
+        return os.path.join(MEDIA_ROOT, str(obj.image))
 
 
 class RecipePostSerializer(serializers.ModelSerializer):
@@ -230,15 +233,14 @@ class RecipePostSerializer(serializers.ModelSerializer):
 
 
 # Сериализаторы подписок
-# Переименовать, хреновый нейминг вышел
 class RecipeNestedSerializer(serializers.ModelSerializer):
     """Вспомогательный сериализатор для рецептов в подписках."""
 
     image = serializers.SerializerMethodField()
 
     def get_image(self, obj):
-        # поменять на ос джойн
-        return '/media/' + str(obj.image)
+        return os.path.join(MEDIA_ROOT, str(obj.image))
+        # return '/media/' + str(obj.image)
 
     class Meta:
         fields = ('id', 'name', 'image', 'cooking_time')
@@ -246,7 +248,7 @@ class RecipeNestedSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionGetSerializer(serializers.ModelSerializer):
-    """Сериализатор для подписок."""
+    """Сериализатор подписок."""
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(
