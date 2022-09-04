@@ -23,9 +23,9 @@ def import_ingridients(data):
     )
     for line in data:
         obj, created = IngredientUnit.objects.get_or_create(
-            name=line[0]
+            name=line[0].lower()
         )
-        measurement_units = MeasureUnit.objects.filter(name=line[1])
+        measurement_units = MeasureUnit.objects.filter(name=line[1].lower())
         obj.measurement_unit.set(measurement_units)
         obj.save()
         print(f'{line[0]}; {line[1]}')

@@ -1,26 +1,23 @@
-import os
-
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField, PrimaryKeyRelatedField
+from rest_framework.relations import PrimaryKeyRelatedField
 
 from app.models import (
     FavoriteRecipe, Ingredient, IngredientUnit, Recipe, RecipeIngredient,
     RecipeTag, ShoppingCart, Subscription, Tag, User
 )
-from backend_project.settings import MEDIA_ROOT
 
 
 WRONG_CURRENT_PASSWORD = 'Current password is wrong'
+CANNOT_USER_ME_AS_USERNAME = 'You cannot use "me" as username'
 NOT_UNIQUE_INGREDS = 'Ingredient {ingredient} in a recipe should be unique'
 NOT_POSITIVE_COOKING_TIME = 'Cooking time should be more than 0 minutes'
 NOT_POSITIVE_AMOUNT = 'Amount of {ingredient} should be more 0'
 
+
 # Сериализаторы функционала, связанного с пользователями
-
-
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для кастомной модели пользователя."""
 
@@ -54,6 +51,8 @@ class UserSerializer(serializers.ModelSerializer):
             errors['password'] = list(e.messages)
         if errors:
             raise serializers.ValidationError(errors)
+        if attrs.get('username', '').lower() == 'me':
+            raise serializers.ValidationError(CANNOT_USER_ME_AS_USERNAME)
         return super(UserSerializer, self).validate(attrs)
 
     def get_is_subscribed(self, obj):
@@ -180,7 +179,7 @@ class RecipeGetSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_image(self, obj):
-        return os.path.join(MEDIA_ROOT, str(obj.image))
+        return '/media/' + str(obj.image)
 
 
 class RecipePostSerializer(serializers.ModelSerializer):
@@ -188,11 +187,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
 
     tags = PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all())
     image = Base64ImageField()
-    author = SlugRelatedField(
-        slug_field='username',
-        default=serializers.CurrentUserDefault(),
-        read_only=True
-    )
+    author = UserSerializer(read_only=True)
     ingredients = RecipeIngredientPostSerializer(
         many=True,
         source='ingredient'
@@ -200,7 +195,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
 
     class Meta:
         fields = (
-            'ingredients', 'tags', 'image', 'author', 'text',
+            'id', 'ingredients', 'tags', 'image', 'author', 'text',
             'cooking_time', 'name'
         )
         model = Recipe
@@ -244,7 +239,6 @@ class RecipePostSerializer(serializers.ModelSerializer):
                     NOT_UNIQUE_INGREDS.format(ingredient=name)
                 )
             ingredients_list.append(ingredient)
-
             if amount <= 0:
                 raise serializers.ValidationError(
                     NOT_POSITIVE_AMOUNT.format(ingredient=name)
@@ -260,7 +254,7 @@ class RecipeNestedSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
 
     def get_image(self, obj):
-        return os.path.join(MEDIA_ROOT, str(obj.image))
+        return '/media/' + str(obj.image)
 
     class Meta:
         fields = ('id', 'name', 'image', 'cooking_time')

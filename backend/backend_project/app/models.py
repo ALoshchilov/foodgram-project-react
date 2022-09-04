@@ -1,5 +1,3 @@
-import os
-
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
@@ -132,7 +130,7 @@ class Recipe(models.Model):
     )
     text = models.TextField(verbose_name='Описание рецепта')
     image = models.ImageField(
-        upload_to=os.path.join('recipes', 'images'),
+        upload_to='recipes/images/',
         verbose_name='Изображение'
     )
     tag = models.ManyToManyField(
@@ -205,7 +203,7 @@ class Subscription(models.Model):
 
 
 class FavoriteRecipe(models.Model):
-    """Модель любимых рецептов."""
+    """Модель любимых рецептов"""
     recipe = models.ForeignKey(
         Recipe,
         verbose_name='Рецепт',
@@ -225,7 +223,7 @@ class FavoriteRecipe(models.Model):
         verbose_name_plural = 'Любимые рецепты'
         constraints = [UniqueConstraint(
             fields=['recipe', 'user'],
-            name='unique_user_recipe_pair'
+            name='unique_user_favorite_recipe_pair'
         )]
 
 
@@ -251,5 +249,5 @@ class ShoppingCart(models.Model):
         verbose_name_plural = 'Рецепты в корзине покупок'
         constraints = [UniqueConstraint(
             fields=['recipe', 'user'],
-            name='unique_user_recipe_pair'
+            name='unique_user_shopping_recipe_pair'
         )]

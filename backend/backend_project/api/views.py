@@ -1,8 +1,8 @@
 import io
 
+from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 
 from .filters import RecipeFilter
 from .paginators import PageLimitPagination
-from .permissions import Author, Follower, ReadOnly
+from .permissions import Follower, ReadOnly, IsAuthorOrReadOnly
 from .serializers import (
     ChangePasswordSerializer, IngredientUnitSerializer, RecipeGetSerializer,
     RecipeNestedSerializer, RecipePostSerializer, SubscriptionGetSerializer,
@@ -111,7 +111,9 @@ class IngredientViewSet(
     def get_queryset(self):
         name_param = self.request.query_params.get('name', None)
         if name_param:
-            return Ingredient.objects.filter(name__name__icontains=name_param)
+            return Ingredient.objects.filter(
+                name__name__icontains=name_param.lower()
+            )
         return Ingredient.objects.all()
 
 
@@ -119,7 +121,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     queryset = Recipe.objects.all()
     serializer_class = RecipeGetSerializer
-    permission_classes = [Author | ReadOnly]
+    permission_classes = (IsAuthorOrReadOnly,)
     pagination_class = PageLimitPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
