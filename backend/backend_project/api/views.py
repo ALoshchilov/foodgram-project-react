@@ -76,7 +76,7 @@ class ChangePasswordView(CreateAPIView):
         user = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user.set_password(serializer.data.get("new_password"))
+        user.set_password(serializer.data.get('new_password'))
         user.save()
         return Response(
             {
@@ -141,7 +141,7 @@ class SubscriptionPostDeleteView(APIView):
     permission_classes = [Follower | ReadOnly]
 
     def post(self, request, **kwargs):
-        author = get_object_or_404(User, id=self.kwargs["id"])
+        author = get_object_or_404(User, id=self.kwargs['id'])
         if author == self.request.user:
             return Response(
                 {
@@ -169,7 +169,7 @@ class SubscriptionPostDeleteView(APIView):
         get_object_or_404(
             Subscription,
             user=self.request.user,
-            author=get_object_or_404(User, id=self.kwargs["id"])
+            author=get_object_or_404(User, id=self.kwargs['id'])
         ).delete()
         return Response(
             {
@@ -185,7 +185,7 @@ class SubscriptionGetViewSet(
 ):
     serializer_class = SubscriptionGetSerializer
     pagination_class = PageLimitPagination
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         queryset = User.objects.filter(
@@ -212,7 +212,7 @@ class SubscriptionGetViewSet(
 class FavoritePostDeleteView(APIView):
 
     def post(self, request, **kwargs):
-        recipe = get_object_or_404(Recipe, id=self.kwargs["id"])
+        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
         serializer = RecipeNestedSerializer(recipe)
         favorite, created = FavoriteRecipe.objects.get_or_create(
             user=self.request.user, recipe=recipe
@@ -229,7 +229,7 @@ class FavoritePostDeleteView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def delete(self, requets, **kwargs):
-        recipe = get_object_or_404(Recipe, id=self.kwargs["id"])
+        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
         favorite = get_object_or_404(
             FavoriteRecipe, user=self.request.user, recipe=recipe
         )
@@ -243,7 +243,7 @@ class ShoppingCartPostDeleteView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request, **kwargs):
-        recipe = get_object_or_404(Recipe, id=self.kwargs["id"])
+        recipe = get_object_or_404(Recipe, id=self.kwargs['id'])
         shopping_list, created = ShoppingCart.objects.get_or_create(
             user=self.request.user, recipe=recipe
         )
@@ -263,7 +263,7 @@ class ShoppingCartPostDeleteView(APIView):
         get_object_or_404(
             ShoppingCart,
             user=self.request.user,
-            recipe=get_object_or_404(Recipe, id=self.kwargs["id"])
+            recipe=get_object_or_404(Recipe, id=self.kwargs['id'])
         ).delete()
         return Response(
             {
@@ -304,7 +304,7 @@ class DownloadShoppingCartView(APIView):
             'DejaVuSerif', 'DejaVuSerif.ttf', 'UTF-8'
         ))
         p.setFont('DejaVuSerif', 20)
-        p.drawString(15, line, "Список покупок.")
+        p.drawString(15, line, 'Список покупок.')
         line -= 40
         p.setFont('DejaVuSerif', 12)
 
