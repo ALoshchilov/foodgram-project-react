@@ -50,6 +50,7 @@ class CustomUserViewSet(
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (AllowAny,)
+    pagination_class = PageLimitPagination
 
 
 class UsersMeApiView(APIView):
@@ -239,6 +240,8 @@ class FavoritePostDeleteView(APIView):
 # Вью - сеты функционла корзины
 class ShoppingCartPostDeleteView(APIView):
 
+    permission_classes = (IsAuthenticated,)
+
     def post(self, request, **kwargs):
         recipe = get_object_or_404(Recipe, id=self.kwargs["id"])
         shopping_list, created = ShoppingCart.objects.get_or_create(
@@ -273,18 +276,9 @@ class ShoppingCartPostDeleteView(APIView):
 
 class DownloadShoppingCartView(APIView):
 
-    def get(self, request, **kwargs):
-        line = 800
+    permission_classes = (IsAuthenticated,)
 
-        buffer = io.BytesIO()
-        p = canvas.Canvas(buffer)
-        pdfmetrics.registerFont(TTFont(
-            'DejaVuSerif', 'DejaVuSerif.ttf', 'UTF-8'
-        ))
-        p.setFont('DejaVuSerif', 20)
-        p.drawString(15, line, "Список покупок.")
-        line -= 40
-        p.setFont('DejaVuSerif', 12)
+    def get(self, request, **kwargs):
 
         recipes = Recipe.objects.filter(
             id__in=ShoppingCart.objects.filter(
@@ -302,6 +296,18 @@ class DownloadShoppingCartView(APIView):
                     shopping_list[key] += ingredient.amount
                 else:
                     shopping_list[key] = ingredient.amount
+
+        line = 800
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer)
+        pdfmetrics.registerFont(TTFont(
+            'DejaVuSerif', 'DejaVuSerif.ttf', 'UTF-8'
+        ))
+        p.setFont('DejaVuSerif', 20)
+        p.drawString(15, line, "Список покупок.")
+        line -= 40
+        p.setFont('DejaVuSerif', 12)
+
         for ingredient, amount in sorted(shopping_list.items()):
             line -= 20
             p.drawString(

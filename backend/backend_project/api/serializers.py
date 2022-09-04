@@ -19,7 +19,7 @@ NOT_POSITIVE_AMOUNT = 'Amount of {ingredient} should be more 0'
 
 # Сериализаторы функционала, связанного с пользователями
 class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор для кастомной модели пользователя."""
+    """Сериализатор кастомной модели пользователя."""
 
     password = serializers.CharField(write_only=True)
     is_subscribed = serializers.SerializerMethodField()
@@ -189,8 +189,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     author = UserSerializer(read_only=True)
     ingredients = RecipeIngredientPostSerializer(
-        many=True,
-        source='ingredient'
+        many=True, source='ingredient'
     )
 
     class Meta:
