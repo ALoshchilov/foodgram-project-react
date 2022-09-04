@@ -1,3 +1,14 @@
+#Исключения под текущий проект
+backend/backend_project/media
+backend/backend_project/static
+backend/backend_project/django_static
+infra/media
+infra/deploy_test
+infra/original
+.vscode
+__pycache__
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
