@@ -90,9 +90,6 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(errors)
         return super(ChangePasswordSerializer, self).validate(attrs)
 
-    class Meta:
-        model = User
-
 
 # Сериализаторы функционала, связанного с рецептами
 
@@ -100,7 +97,7 @@ class TagSerializer(serializers.ModelSerializer):
     """Сериализатор модели тегов."""
 
     class Meta:
-        fields = ('__all__')
+        fields = '__all__'
         model = Tag
 
 
@@ -111,7 +108,7 @@ class IngredientUnitSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.CharField(source='measurement_unit.name')
 
     class Meta:
-        fields = ('__all__')
+        fields = '__all__'
         model = IngredientUnit
 
 
@@ -203,28 +200,25 @@ class RecipePostSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('ingredient')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
+        recipe.tag.set(tags)
         for ingredient in ingredients:
             pieces = RecipeIngredient.objects.create(
                 ingredient=ingredient['id'],
                 amount=ingredient['amount'])
             recipe.ingredient.add(pieces)
-        for tag in tags:
-            RecipeTag.objects.create(recipe=recipe, tag=tag)
         return recipe
 
     def update(self, instance, validated_data):
         ingredients = validated_data.pop('ingredient')
         tags = validated_data.pop('tags')
         super().update(instance, validated_data)
-        instance.ingredient.select_related().all().delete()
-        RecipeTag.objects.filter(recipe=instance).delete()
+        instance.ingredient.clear()
+        instance.tag.set(tags)
         for ingredient in ingredients:
             ing = RecipeIngredient.objects.create(
                 ingredient=ingredient['id'],
                 amount=ingredient['amount'])
             instance.ingredient.add(ing)
-        for tag in tags:
-            RecipeTag.objects.create(recipe=instance, tag=tag)
         return instance
 
     def validate(self, attrs):

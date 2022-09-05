@@ -2,6 +2,9 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db.models import UniqueConstraint
+from django.utils.text import slugify
+from time import strftime
+from transliterate import translit
 
 User = get_user_model()
 
@@ -65,7 +68,7 @@ class Ingredient(models.Model):
         verbose_name_plural = 'Ингредиенты'
 
     def __str__(self):
-        return self.name
+        return f'{self.name.name} ({self.measurement_unit.name})'
 
 
 class Tag(models.Model):
@@ -115,6 +118,12 @@ class RecipeIngredient(models.Model):
         verbose_name = 'Связь рецепта с ингредиентами'
         verbose_name_plural = 'Связи рецепта с ингредиентами'
 
+    def __str__(self):
+        return (
+            f'Ингредиент "{self.ingredient.name}" в количестве "{self.amount}'
+            f' ({self.ingredient.measurement_unit})"'
+        )
+
 
 class Recipe(models.Model):
     """Модель рецептов."""
@@ -151,12 +160,24 @@ class Recipe(models.Model):
         related_name='recipes',
         verbose_name='Ингредиенты'
     )
+    slug = models.SlugField(
+        max_length=150,
+        unique=True,
+        verbose_name='slug'
+    )
 
     class Meta:
         ordering = ['-pub_date']
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
 
+    def save(self, *args, **kwargs):
+        self.slug = slugify(
+            f'{translit(self.name, "ru", reversed=True)[:136]}'
+            f'{strftime("%Y%m%d%H%M%S")}'
+        )
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return self.name
 
@@ -179,6 +200,11 @@ class RecipeTag(models.Model):
     class Meta:
         verbose_name = 'Связь рецепта с тегами'
         verbose_name_plural = 'Связи рецепта с тегами'
+
+    def __str__(self):
+        return (
+            f'Рецепт "{self.recipe.name}" связан с тэгом "{self.tag.name}"'
+        )
 
 
 class Subscription(models.Model):
@@ -203,6 +229,11 @@ class Subscription(models.Model):
         )]
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        return (
+            f'"{self.user.username}" подписан на "{self.author.username}"'
+        )
 
 
 class FavoriteRecipe(models.Model):
@@ -229,6 +260,12 @@ class FavoriteRecipe(models.Model):
             name='unique_user_favorite_recipe_pair'
         )]
 
+    def __str__(self):
+        return (
+            f'Рецепт "{self.recipe.name}" в избранных у пользователя'
+            f'"{self.user.username}"'
+        )
+
 
 class ShoppingCart(models.Model):
     """Модель рецептов в корзине покупок."""
@@ -254,3 +291,9 @@ class ShoppingCart(models.Model):
             fields=['recipe', 'user'],
             name='unique_user_shopping_recipe_pair'
         )]
+
+    def __str__(self):
+        return (
+            f'Рецепт "{self.recipe.name}" в корзине у пользователя'
+            f'"{self.user.username}"'
+        )
