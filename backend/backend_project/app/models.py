@@ -201,6 +201,7 @@ class Subscription(models.Model):
             name='unique_subscription',
             fields=['user', 'author']
         )]
+        ordering = ['author_id']
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
 
