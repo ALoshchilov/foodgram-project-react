@@ -5,7 +5,9 @@ from rest_framework import serializers
 from rest_framework.relations import PrimaryKeyRelatedField
 
 from app.models import (
-    FavoriteRecipe, Ingredient, IngredientUnit, Recipe, RecipeIngredient,
+    FavoriteRecipe, Ingredient, 
+    # IngredientUnit,
+    Recipe, RecipeIngredient,
     RecipeTag, ShoppingCart, Subscription, Tag, User
 )
 
@@ -104,21 +106,21 @@ class TagSerializer(serializers.ModelSerializer):
 class IngredientUnitSerializer(serializers.ModelSerializer):
     """Сериализатор модели ингредиентов и единиц измерения"""
 
-    name = serializers.CharField(source='name.name')
-    measurement_unit = serializers.CharField(source='measurement_unit.name')
+    # name = serializers.CharField(source='name.name')
+    # measurement_unit = serializers.CharField(source='measurement_unit.name')
 
     class Meta:
-        fields = '__all__'
-        model = IngredientUnit
+        fields = ('id', 'name', 'measurement_unit')
+        model = Ingredient
 
 
 class RecipeIngredientGetSerializer(serializers.ModelSerializer):
     """Сериализатор модели-связи для ингредиентов и рецептов"""
 
     id = serializers.CharField(source='ingredient.id')
-    name = serializers.CharField(source='ingredient.name.name')
+    name = serializers.CharField(source='ingredient.name')
     measurement_unit = serializers.CharField(
-        source='ingredient.measurement_unit.name'
+        source='ingredient.measurement_unit'
     )
 
     class Meta:

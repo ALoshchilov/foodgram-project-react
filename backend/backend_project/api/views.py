@@ -113,7 +113,7 @@ class IngredientViewSet(
         name_param = self.request.query_params.get('name', None)
         if name_param:
             return Ingredient.objects.filter(
-                name__name__icontains=name_param.lower()
+                name__icontains=name_param.lower()
             )
         return Ingredient.objects.all()
 

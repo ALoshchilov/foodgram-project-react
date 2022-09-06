@@ -9,58 +9,60 @@ from transliterate import translit
 User = get_user_model()
 
 
-class MeasureUnit(models.Model):
-    """Модель единиц измерения ингредиентов"""
+# class MeasureUnit(models.Model):
+#     """Модель единиц измерения ингредиентов"""
 
-    name = models.CharField(
-        max_length=50,
-        unique=True,
-        verbose_name='Единица измерения',
-        help_text='Введите единицу измерения'
-    )
+#     name = models.CharField(
+#         max_length=50,
+#         unique=True,
+#         verbose_name='Единица измерения',
+#         help_text='Введите единицу измерения'
+#     )
 
-    class Meta:
-        verbose_name = 'Единица измерения'
-        verbose_name_plural = 'Единицы измерения'
+#     class Meta:
+#         verbose_name = 'Единица измерения'
+#         verbose_name_plural = 'Единицы измерения'
 
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name
 
 
-class IngredientUnit(models.Model):
-    """Модель ингредиентов."""
+# class IngredientUnit(models.Model):
+#     """Модель ингредиентов."""
 
-    name = models.CharField(
-        max_length=200,
-        unique=True,
-        verbose_name='Название ингредиента',
-        help_text='Введите название'
-    )
-    measurement_unit = models.ManyToManyField(
-        MeasureUnit,
-        through='Ingredient',
-        related_name='ingredients',
-        verbose_name='Единицы измерения'
-    )
+#     name = models.CharField(
+#         max_length=200,
+#         unique=True,
+#         verbose_name='Название ингредиента',
+#         help_text='Введите название'
+#     )
+#     measurement_unit = models.ManyToManyField(
+#         MeasureUnit,
+#         through='Ingredient',
+#         related_name='ingredients',
+#         verbose_name='Единицы измерения'
+#     )
 
-    class Meta:
-        verbose_name = 'Наименование ингредиента'
-        verbose_name_plural = 'Наименования ингредиентов'
+#     class Meta:
+#         verbose_name = 'Наименование ингредиента'
+#         verbose_name_plural = 'Наименования ингредиентов'
 
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name
 
 
 class Ingredient(models.Model):
     """Модель связи ингредиентов и единиц измерения"""
 
-    name = models.ForeignKey(
-        IngredientUnit,
-        on_delete=models.CASCADE
+    name = models.CharField(
+        max_length=200,
+        verbose_name='Название ингредиента',
+        help_text='Введите название ингредиента'
     )
-    measurement_unit = models.ForeignKey(
-        MeasureUnit,
-        on_delete=models.CASCADE
+    measurement_unit = models.CharField(
+        max_length=200,
+        verbose_name='Единица измерения',
+        help_text='Введите единицу измерения'
     )
 
     class Meta:
@@ -68,7 +70,7 @@ class Ingredient(models.Model):
         verbose_name_plural = 'Ингредиенты'
 
     def __str__(self):
-        return f'{self.name.name} ({self.measurement_unit.name})'
+        return f'{self.name}, {self.measurement_unit}'
 
 
 class Tag(models.Model):

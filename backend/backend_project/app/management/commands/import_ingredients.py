@@ -2,7 +2,7 @@ import csv
 
 from django.core.management import BaseCommand
 
-from app.models import IngredientUnit, MeasureUnit
+from app.models import Ingredient
 
 
 def parse_csv(file_path):
@@ -15,21 +15,14 @@ def parse_csv(file_path):
     return data
 
 
-def import_ingridients(data):
-    measure_units = set([line[1] for line in data])
-    print(measure_units)
-    MeasureUnit.objects.bulk_create(
-        [MeasureUnit(name=unit) for unit in measure_units]
-    )
-    for line in data:
-        obj, created = IngredientUnit.objects.get_or_create(
-            name=line[0].lower()
-        )
-        measurement_units = MeasureUnit.objects.filter(name=line[1].lower())
-        obj.measurement_unit.set(measurement_units)
-        obj.save()
-        print(f'{line[0]}; {line[1]}')
-
+def import_ingredients(data):
+    ingredients = [
+        Ingredient(
+            name=line[0],
+            measurement_unit=line[1]
+        ) for line in data
+    ]
+    Ingredient.objects.bulk_create(ingredients)
 
 class Command(BaseCommand):
     """Менеджмент команда для импорта списка ингредиентов и не более"""
@@ -39,4 +32,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         path = kwargs.get('path')
-        import_ingridients(parse_csv(path))
+        import_ingredients(parse_csv(path))
