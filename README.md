@@ -103,3 +103,9 @@ SECRET_KEY - последовательность для создания хэш
 ```
 SECRET_KEY=Hghgsfjg8^yn^##a1)ilz@4zqj=rq&agdol^##zgl9(vs
 ```
+### Документация
+
+Документация доступна ссылке
+```
+http://aloshchilov.hopto.org/api/docs/redoc.html#tag/Recepty/operation/%D0%A1%D0%BF%D0%B8%D1%81%D0%BE%D0%BA%20%D1%80%D0%B5%D1%86%D0%B5%D0%BF%D1%82%D0%BE%D0%B2
+```
