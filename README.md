@@ -60,14 +60,6 @@ docker-compose run backend python manage.py migrate
 docker-compose exec backend python manage.py createsuperuser
 ```
 
-Наполнить базу тестовыми данными
-
-```
-docker-compose exec backend bash
-python manage.py loaddata fixtures/fixtures.json
-cp fixtures/media/recipes/ media/
-```
-
 ### Описание переменных окружения
 
 DB_ENGINE - тип используемой БД
