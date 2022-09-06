@@ -21,7 +21,8 @@ from .serializers import (
     TagSerializer, UserSerializer
 )
 from app.models import (
-    FavoriteRecipe, Ingredient, Recipe,  ShoppingCart, Subscription, Tag, User
+    FavoriteRecipe, Ingredient, Recipe, RecipeIngredient, ShoppingCart,
+    Subscription, Tag, User
 )
 
 
@@ -287,15 +288,15 @@ class DownloadShoppingCartView(APIView):
         )
         shopping_list = {}
         for recipe in recipes:
-            for ingredient in recipe.ingredient.all():
+            for piece in RecipeIngredient.objects.filter(recipe=recipe):
                 key = (
-                    f'{str(ingredient.ingredient.name)}'
-                    f', {str(ingredient.ingredient.measurement_unit.name)}'
+                    f'{str(piece.ingredient.name)}'
+                    f', {str(piece.ingredient.measurement_unit)}'
                 )
                 if shopping_list.get(key):
-                    shopping_list[key] += ingredient.amount
+                    shopping_list[key] += piece.amount
                 else:
-                    shopping_list[key] = ingredient.amount
+                    shopping_list[key] = piece.amount
 
         line = 800
         buffer = io.BytesIO()

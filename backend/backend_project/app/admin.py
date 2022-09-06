@@ -1,9 +1,7 @@
 from django.contrib import admin
 
 from app.models import (
-    FavoriteRecipe, Ingredient,
-    #IngredientUnit, MeasureUnit,
-    Recipe, ShoppingCart, Subscription, Tag, User
+    FavoriteRecipe, Ingredient, Recipe, ShoppingCart, Subscription, Tag, User
 )
 
 
@@ -13,10 +11,10 @@ class IngredientAdmin(admin.ModelAdmin):
     search_fields = ['name__name']
 
     def display_name(self, obj):
-        return obj.name.name
+        return obj.name
 
     def display_unit(self, obj):
-        return obj.measurement_unit.name
+        return obj.measurement_unit
 
 
 class RecipeAdmin(admin.ModelAdmin):
@@ -31,8 +29,6 @@ class RecipeAdmin(admin.ModelAdmin):
 
 admin.site.register(FavoriteRecipe)
 admin.site.register(Ingredient, IngredientAdmin)
-# admin.site.register(IngredientUnit)
-# admin.site.register(MeasureUnit)
 admin.site.register(Recipe, RecipeAdmin)
 admin.site.register(ShoppingCart)
 admin.site.register(Subscription)

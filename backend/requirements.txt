@@ -7,6 +7,7 @@ djangorestframework-simplejwt==4.8.0
 djoser
 django-filter==21.1
 drf-extra-fields
+flake8
 gunicorn==20.0.4
 pillow
 psycopg2-binary==2.8.6
@@ -18,3 +19,4 @@ python-dotenv
 pytz==2020.1
 reportlab
 sqlparse==0.3.1
+transliterate

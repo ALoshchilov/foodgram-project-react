@@ -9,48 +9,6 @@ from transliterate import translit
 User = get_user_model()
 
 
-# class MeasureUnit(models.Model):
-#     """Модель единиц измерения ингредиентов"""
-
-#     name = models.CharField(
-#         max_length=50,
-#         unique=True,
-#         verbose_name='Единица измерения',
-#         help_text='Введите единицу измерения'
-#     )
-
-#     class Meta:
-#         verbose_name = 'Единица измерения'
-#         verbose_name_plural = 'Единицы измерения'
-
-#     def __str__(self):
-#         return self.name
-
-
-# class IngredientUnit(models.Model):
-#     """Модель ингредиентов."""
-
-#     name = models.CharField(
-#         max_length=200,
-#         unique=True,
-#         verbose_name='Название ингредиента',
-#         help_text='Введите название'
-#     )
-#     measurement_unit = models.ManyToManyField(
-#         MeasureUnit,
-#         through='Ingredient',
-#         related_name='ingredients',
-#         verbose_name='Единицы измерения'
-#     )
-
-#     class Meta:
-#         verbose_name = 'Наименование ингредиента'
-#         verbose_name_plural = 'Наименования ингредиентов'
-
-#     def __str__(self):
-#         return self.name
-
-
 class Ingredient(models.Model):
     """Модель связи ингредиентов и единиц измерения"""
 
@@ -101,32 +59,6 @@ class Tag(models.Model):
         return self.name
 
 
-class RecipeIngredient(models.Model):
-    """Модель связи рецептов и ингредиентов."""
-
-    ingredient = models.ForeignKey(
-        Ingredient,
-        verbose_name='Ингредиент',
-        on_delete=models.CASCADE
-    )
-    amount = models.PositiveSmallIntegerField(
-        validators=[
-            MinValueValidator(1)
-        ],
-        verbose_name='Количество'
-    )
-
-    class Meta:
-        verbose_name = 'Связь рецепта с ингредиентами'
-        verbose_name_plural = 'Связи рецепта с ингредиентами'
-
-    def __str__(self):
-        return (
-            f'Ингредиент "{self.ingredient.name}" в количестве "{self.amount}'
-            f' ({self.ingredient.measurement_unit})"'
-        )
-
-
 class Recipe(models.Model):
     """Модель рецептов."""
 
@@ -158,7 +90,8 @@ class Recipe(models.Model):
         verbose_name='Время готовки'
     )
     ingredient = models.ManyToManyField(
-        RecipeIngredient,
+        Ingredient,
+        through='RecipeIngredient',
         related_name='recipes',
         verbose_name='Ингредиенты'
     )
@@ -179,9 +112,48 @@ class Recipe(models.Model):
             f'{strftime("%Y%m%d%H%M%S")}'
         )
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         return self.name
+
+
+class RecipeIngredient(models.Model):
+    """Модель связи рецептов и ингредиентов."""
+
+    ingredient = models.ForeignKey(
+        Ingredient,
+        on_delete=models.CASCADE,
+        related_name='pieces',
+        verbose_name='Ингредиент',
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='pieces',
+        verbose_name='Рецепт',
+    )
+    amount = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1)
+        ],
+        verbose_name='Количество'
+    )
+
+    class Meta:
+        verbose_name = 'Связь рецепта с ингредиентами'
+        verbose_name_plural = 'Связи рецепта с ингредиентами'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['recipe', 'ingredient'], name='unique_piece'
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f'Ингредиент "{self.ingredient.name}" в количестве "{self.amount}'
+            f' ({self.ingredient.measurement_unit})" входит в'
+            f' рецепт "{self.recipe}"'
+        )
 
 
 class RecipeTag(models.Model):
