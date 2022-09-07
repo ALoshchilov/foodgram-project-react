@@ -19,6 +19,8 @@ URL админки: http://aloshchilov.hopto.org/admin/
 Пароль: QWee!@@2
 ```
 
+### Документация API:
+Документация API доступна по ссылке http://aloshchilov.hopto.org/api/docs/redoc.html
 
 ### Запуск проекта:
 
