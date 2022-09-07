@@ -58,7 +58,9 @@ jobs:
           username: ${{ secrets.USER }}
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
-          script: |          
+          script: |
+            sudo pwd
+            sudo ls          
             sudo docker-compose stop
             sudo docker-compose rm backend
             sudo docker-compose rm frontend
