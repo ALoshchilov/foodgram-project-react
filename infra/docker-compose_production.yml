@@ -14,7 +14,7 @@ services:
       - ../frontend/:/app/result_build/
       
   backend:
-	image: aloshchilov/foodgram_backend
+    image: aloshchilov/foodgram_backend
     restart: always
     volumes:
       - static_value:/app/django_static/
