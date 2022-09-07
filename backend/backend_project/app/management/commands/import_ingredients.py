@@ -24,6 +24,7 @@ def import_ingredients(data):
     ]
     Ingredient.objects.bulk_create(ingredients)
 
+
 class Command(BaseCommand):
     """Менеджмент команда для импорта списка ингредиентов и не более"""
 
