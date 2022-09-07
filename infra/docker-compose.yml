@@ -9,16 +9,12 @@ services:
       - ./.env
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: aloshchilov/foodgram_frontend:v1.0
     volumes:
       - ../frontend/:/app/result_build/
       
   backend:
-    build:
-      context: ../backend/
-      dockerfile: Dockerfile
+    image: aloshchilov/foodgram_backend:latest
     restart: always
     volumes:
       - static_value:/app/django_static/

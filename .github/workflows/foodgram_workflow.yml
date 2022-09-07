@@ -73,8 +73,6 @@ jobs:
             sudo docker-compose exec -T backend python manage.py collectstatic --noinput
             sudo docker-compose exec -T backend python manage.py makemigrations --noinput
             sudo docker-compose exec -T backend python manage.py migrate --noinput
-            sudo docker-compose exec -T backend python manage.py loaddata ./fixtures/fixtures.json
-            sudo docker-compose exec -T backend cp ./fixtures/media/recipes/ ./media/ -r
 
   send_message:
     runs-on: ubuntu-latest
